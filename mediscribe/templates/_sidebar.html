@@ -1,0 +1,43 @@
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">
+      <div class="logo-icon">🏥</div>
+      <div class="logo-text">
+        <div class="name">MediScribe AI</div>
+        <div class="tagline">Clinical Documentation</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+      <span class="icon">🏠</span> Dashboard
+    </a>
+    <a href="/consultation" class="nav-item {% if request.path == '/consultation' %}active{% endif %}">
+      <span class="icon">🎤</span> New Consultation
+    </a>
+    <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}">
+      <span class="icon">📁</span> Patient History
+    </a>
+
+    <div class="nav-section-label" style="margin-top:20px">System</div>
+    <a href="#" class="nav-item" onclick="alert('Settings coming soon!')">
+      <span class="icon">⚙️</span> Settings
+    </a>
+    <a href="#" class="nav-item" onclick="alert('Help & Documentation coming soon!')">
+      <span class="icon">❓</span> Help
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="avatar">{{ user_name[0] if user_name else 'U' }}</div>
+      <div class="info">
+        <div class="uname">{{ user_name }}</div>
+        <div class="urole">{{ user_role | capitalize }}</div>
+      </div>
+    </div>
+    <a href="/logout" class="logout-btn">🚪 Sign Out</a>
+  </div>
+</div>

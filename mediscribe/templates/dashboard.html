@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediScribe AI — Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <!-- Sidebar -->
+  {% include '_sidebar.html' %}
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Dashboard</h2>
+        <p>Overview of your clinical activity</p>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="currentDate"></span>
+        <a href="/consultation" class="btn btn-blue btn-sm">➕ New Consultation</a>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Welcome Banner -->
+      <div style="background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border-radius:var(--radius);padding:28px 32px;margin-bottom:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:1.6rem;">Good {{ 'morning' if True else 'afternoon' }}, {{ user_name }} 👋</h2>
+          <p style="opacity:.8;margin-top:6px;font-size:.92rem;">Your AI clinical assistant is ready. Start a new consultation below.</p>
+        </div>
+        <div style="font-size:4rem;opacity:.25">🏥</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue">👥</div>
+          <div>
+            <div class="stat-num" id="statPatients">{{ patient_count }}</div>
+            <div class="stat-label">Total Patients</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon teal">📋</div>
+          <div>
+            <div class="stat-num" id="statRecords">{{ record_count }}</div>
+            <div class="stat-label">Total Records</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">📅</div>
+          <div>
+            <div class="stat-num" id="statToday">—</div>
+            <div class="stat-label">Today's Notes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <a href="/consultation" class="qa-tile">
+          <div class="icon">🎤</div>
+          <div class="label">Start Consultation</div>
+          <div class="desc">Record & generate notes</div>
+        </a>
+        <a href="/history" class="qa-tile">
+          <div class="icon">📁</div>
+          <div class="label">Patient History</div>
+          <div class="desc">Browse past records</div>
+        </a>
+        <a href="#" class="qa-tile" onclick="alert('Prescription manager coming soon!')">
+          <div class="icon">💊</div>
+          <div class="label">Prescriptions</div>
+          <div class="desc">View & manage Rx</div>
+        </a>
+      </div>
+
+      <!-- Recent Records -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📋 Recent Consultations</h3>
+          <a href="/history" class="btn btn-outline btn-sm">View All →</a>
+        </div>
+        <div class="card-body" style="padding:0">
+          {% if records %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Assessment</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+              <tr onclick="window.location.href='/history'">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div class="avatar" style="width:34px;height:34px;font-size:.8rem;">{{ r.patient_name[0] if r.patient_name else '?' }}</div>
+                    <span class="fw-600">{{ r.patient_name }}</span>
+                  </div>
+                </td>
+                <td>
+                  {% if r.soap_notes %}
+                    {% set soap = r.soap_notes | tojson %}
+                    <span class="text-sm text-muted">SOAP notes available</span>
+                  {% else %}
+                    <span class="text-sm text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-sm text-muted">{{ r.date[:10] if r.date else '—' }}</td>
+                <td><span class="badge badge-blue">View</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No consultations yet. <a href="/consultation" style="color:var(--primary)">Start your first one!</a></p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-IN', {
+  weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+});
+
+// Fetch live stats
+fetch('/api/stats').then(r => r.json()).then(d => {
+  document.getElementById('statPatients').textContent = d.patients;
+  document.getElementById('statRecords').textContent  = d.records;
+  document.getElementById('statToday').textContent    = d.today;
+});
+</script>
+</body>
+</html>

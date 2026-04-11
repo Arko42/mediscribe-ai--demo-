@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediScribe AI — History</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include '_sidebar.html' %}
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>📁 Patient History</h2>
+        <p>All consultation records</p>
+      </div>
+      <div class="topbar-right">
+        <input type="text" id="searchInput" placeholder="🔍 Search patient…"
+          style="padding:8px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:.88rem;width:220px;"
+          oninput="filterRecords(this.value)">
+        <a href="/consultation" class="btn btn-blue btn-sm">➕ New</a>
+      </div>
+    </div>
+
+    <div class="page-body">
+      {% if records %}
+      <div id="recordsList">
+        {% for r in records %}
+        {% set soap = r.soap_notes | fromjson if r.soap_notes else {} %}
+        <div class="history-card" onclick="openRecord({{ r.id }})"
+             data-name="{{ r.patient_name | lower }}">
+          <div class="hc-avatar">{{ r.patient_name[0] if r.patient_name else '?' }}</div>
+          <div>
+            <div class="hc-name">{{ r.patient_name }}</div>
+            <div class="hc-preview">
+              {% if soap and soap.assessment %}
+                📋 {{ soap.assessment[:80] }}…
+              {% else %}
+                📋 SOAP notes recorded
+              {% endif %}
+            </div>
+          </div>
+          <div class="hc-date">
+            <div>{{ r.date[:10] if r.date else '—' }}</div>
+            <div class="time" style="margin-top:2px;color:var(--text-light)">{{ r.date[11:16] if r.date and r.date|length > 10 else '' }}</div>
+            <span class="badge badge-green" style="margin-top:6px">View →</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div id="noResults" class="empty-state" style="display:none">
+        <div class="icon">🔍</div>
+        <p>No matching records found</p>
+      </div>
+
+      {% else %}
+      <div class="empty-state" style="margin-top:60px">
+        <div class="icon">📭</div>
+        <p style="font-size:1rem;font-weight:600;color:var(--text-dark);margin-bottom:8px">No records yet</p>
+        <p>Start a consultation to create your first patient record.</p>
+        <a href="/consultation" class="btn btn-blue" style="margin-top:20px">🎤 Start Consultation</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="modalPatientName" style="font-size:1.1rem;font-weight:700"></h3>
+        <div id="modalDate" style="font-size:.8rem;color:var(--text-light);margin-top:2px"></div>
+      </div>
+      <button class="close-btn" onclick="closeModalDirect()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalLoading" style="text-align:center;padding:40px">
+        <div class="ai-spinner" style="margin:0 auto"></div>
+        <p style="margin-top:12px;color:var(--text-light)">Loading record…</p>
+      </div>
+      <div id="modalContent" style="display:none">
+        <!-- SOAP -->
+        <h4 style="font-size:.88rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-light);margin-bottom:12px">SOAP Notes</h4>
+        <div class="soap-grid mb-16">
+          <div class="soap-section">
+            <div class="soap-label s">🗣️ Subjective</div>
+            <div class="soap-content" id="mSoapS" style="padding:12px;font-size:.88rem;min-height:70px;background:#fff;border-top:1px solid var(--border)"></div>
+          </div>
+          <div class="soap-section">
+            <div class="soap-label o">🔬 Objective</div>
+            <div class="soap-content" id="mSoapO" style="padding:12px;font-size:.88rem;min-height:70px;background:#fff;border-top:1px solid var(--border)"></div>
+          </div>
+          <div class="soap-section">
+            <div class="soap-label a">💡 Assessment</div>
+            <div class="soap-content" id="mSoapA" style="padding:12px;font-size:.88rem;min-height:70px;background:#fff;border-top:1px solid var(--border)"></div>
+          </div>
+          <div class="soap-section">
+            <div class="soap-label p">📝 Plan</div>
+            <div class="soap-content" id="mSoapP" style="padding:12px;font-size:.88rem;min-height:70px;background:#fff;border-top:1px solid var(--border)"></div>
+          </div>
+        </div>
+
+        <!-- Prescription -->
+        <h4 style="font-size:.88rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-light);margin-bottom:12px">💊 Prescription</h4>
+        <div id="mRxContainer"></div>
+
+        <!-- Raw text -->
+        <div class="divider"></div>
+        <details>
+          <summary style="cursor:pointer;font-size:.85rem;color:var(--text-light);font-weight:600">📝 Original Consultation Text</summary>
+          <div id="mRawText" style="margin-top:10px;padding:12px;background:var(--bg);border-radius:var(--radius-sm);font-size:.85rem;line-height:1.6;color:var(--text-mid)"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterRecords(q) {
+  const cards    = document.querySelectorAll('.history-card');
+  const noResult = document.getElementById('noResults');
+  q = q.toLowerCase();
+  let visible = 0;
+  cards.forEach(c => {
+    const match = c.dataset.name.includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  noResult.style.display = visible === 0 ? 'block' : 'none';
+}
+
+async function openRecord(id) {
+  document.getElementById('modalBackdrop').classList.add('show');
+  document.getElementById('modalLoading').style.display  = 'block';
+  document.getElementById('modalContent').style.display  = 'none';
+
+  const res  = await fetch(`/api/record/${id}`);
+  const data = await res.json();
+
+  if (data.success) {
+    const r = data.record;
+    document.getElementById('modalPatientName').textContent = r.patient_name || 'Unknown';
+    document.getElementById('modalDate').textContent        = '📅 ' + (r.date || '');
+
+    const s = r.soap || {};
+    document.getElementById('mSoapS').textContent = s.subjective || '—';
+    document.getElementById('mSoapO').textContent = s.objective  || '—';
+    document.getElementById('mSoapA').textContent = s.assessment || '—';
+    document.getElementById('mSoapP').textContent = s.plan       || '—';
+    document.getElementById('mRawText').textContent = r.raw_text || '—';
+
+    const rxCont = document.getElementById('mRxContainer');
+    if (r.prescriptions && r.prescriptions.length > 0) {
+      rxCont.innerHTML = `<table class="rx-table">
+        <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
+        <tbody>${r.prescriptions.map((m,i) => `
+          <tr><td>${i+1}</td><td><strong>${m.name}</strong></td>
+          <td>${m.dosage}</td>
+          <td><span class="badge badge-blue">${m.frequency}</span></td>
+          <td>${m.duration}</td></tr>`).join('')}
+        </tbody></table>`;
+    } else {
+      rxCont.innerHTML = '<p style="color:var(--text-light);font-size:.88rem">No prescriptions recorded</p>';
+    }
+
+    document.getElementById('modalLoading').style.display = 'none';
+    document.getElementById('modalContent').style.display = 'block';
+  }
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalBackdrop')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modalBackdrop').classList.remove('show');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediScribe AI — Consultation</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include '_sidebar.html' %}
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>🎤 New Consultation</h2>
+        <p>Type or paste the patient conversation, then generate AI notes</p>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="currentDate"></span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="consult-layout">
+
+        <!-- LEFT: Input Panel -->
+        <div>
+          <!-- Patient Info -->
+          <div class="card section-gap">
+            <div class="card-header"><h3>👤 Patient Information</h3></div>
+            <div class="card-body">
+              <div class="form-group mb-16">
+                <label>Patient Name</label>
+                <input type="text" id="patientName" placeholder="Enter patient name" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.92rem;">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-group" style="margin:0">
+                  <label>Age</label>
+                  <input type="number" id="patientAge" placeholder="Years" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.92rem;">
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Gender</label>
+                  <select id="patientGender" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.92rem;">
+                    <option value="">Select</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recording -->
+          <div class="card section-gap">
+            <div class="card-header"><h3>🎙️ Consultation Recording</h3></div>
+            <div class="card-body">
+              <button class="rec-btn idle" id="recBtn" onclick="toggleRecord()">
+                <span id="recIcon">🔴</span>
+                <span id="recText">Start Recording</span>
+              </button>
+              <p style="font-size:.78rem;color:var(--text-light);text-align:center;margin-top:8px;">
+                (Simulated recording — type in the textarea below)
+              </p>
+
+              <div class="divider"></div>
+
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <label style="font-size:.85rem;font-weight:600;color:var(--text-mid);">Conversation Text</label>
+                <button class="demo-chip" onclick="fillDemo()">⚡ Auto-fill Demo</button>
+              </div>
+              <textarea class="consult-textarea" id="consultText"
+                placeholder="Type or paste the patient conversation here…&#10;&#10;Example: Patient has fever since 2 days, dry cough, mild headache. Temperature is 38.5 degrees."></textarea>
+
+              <div style="margin-top:16px;display:flex;gap:10px">
+                <button class="btn btn-blue btn-lg" style="flex:1" onclick="generateNotes()">
+                  🧠 Generate AI Notes
+                </button>
+                <button class="btn btn-outline" onclick="clearAll()">🗑️ Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Results Panel -->
+        <div id="resultsPanel" class="results-panel">
+
+          <!-- SOAP Notes -->
+          <div class="card section-gap">
+            <div class="card-header">
+              <h3>📋 SOAP Notes</h3>
+              <span class="badge badge-green">AI Generated</span>
+            </div>
+            <div class="card-body" style="padding:14px">
+              <div class="soap-grid">
+                <div class="soap-section">
+                  <div class="soap-label s">🗣️ S — Subjective</div>
+                  <textarea class="soap-content" id="soapS" rows="4"></textarea>
+                </div>
+                <div class="soap-section">
+                  <div class="soap-label o">🔬 O — Objective</div>
+                  <textarea class="soap-content" id="soapO" rows="4"></textarea>
+                </div>
+                <div class="soap-section">
+                  <div class="soap-label a">💡 A — Assessment</div>
+                  <textarea class="soap-content" id="soapA" rows="4"></textarea>
+                </div>
+                <div class="soap-section">
+                  <div class="soap-label p">📝 P — Plan</div>
+                  <textarea class="soap-content" id="soapP" rows="4"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prescription -->
+          <div class="card section-gap">
+            <div class="card-header">
+              <h3>💊 Prescription</h3>
+              <span class="badge badge-orange">Auto-extracted</span>
+            </div>
+            <div class="card-body" style="padding:0;overflow:hidden;border-radius:0 0 var(--radius) var(--radius)">
+              <div id="rxEmpty" class="empty-state" style="display:none">
+                <div class="icon">💊</div>
+                <p>No medicines extracted</p>
+              </div>
+              <table class="rx-table" id="rxTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Medicine</th>
+                    <th>Dosage</th>
+                    <th>Frequency</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody id="rxBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div style="display:flex;gap:12px">
+            <button class="btn btn-teal btn-lg" style="flex:1" onclick="saveRecord()">
+              💾 Save Record
+            </button>
+            <button class="btn btn-outline" onclick="printNotes()">🖨️ Print</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="ai-spinner"></div>
+    <p id="loadingMsg">AI is analyzing the consultation…</p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-IN', {
+  weekday:'short', day:'numeric', month:'short', year:'numeric'
+});
+
+let isRecording = false;
+let recordInterval = null;
+let currentSOAP = {};
+let currentRx   = [];
+
+function toggleRecord() {
+  const btn      = document.getElementById('recBtn');
+  const icon     = document.getElementById('recIcon');
+  const txt      = document.getElementById('recText');
+  const textarea = document.getElementById('consultText');
+
+  isRecording = !isRecording;
+  if (isRecording) {
+    btn.className  = 'rec-btn recording';
+    icon.innerHTML = '<span class="rec-indicator"></span>';
+    txt.textContent = 'Recording… Click to Stop';
+    // Simulate typing
+    const demo = 'Patient complains of fever since 2 days, dry cough, mild headache and body aches. Temperature recorded at 38.5 degrees Celsius. No vomiting or diarrhea.';
+    let i = textarea.value.length;
+    recordInterval = setInterval(() => {
+      if (i < demo.length) {
+        textarea.value += demo[i++];
+        textarea.scrollTop = textarea.scrollHeight;
+      } else {
+        clearInterval(recordInterval);
+      }
+    }, 40);
+  } else {
+    btn.className  = 'rec-btn idle';
+    icon.textContent = '🔴';
+    txt.textContent  = 'Start Recording';
+    clearInterval(recordInterval);
+  }
+}
+
+const DEMO_TEXTS = [
+  "Patient has fever since 2 days, cough and mild headache. Temperature is 38.5 degrees. Throat slightly red.",
+  "Patient complaints of vomiting and loose stools since morning. Feeling weak. No fever. Abdomen slightly tender.",
+  "Patient has chest pain on exertion, mild breathlessness. BP 150/95. On hypertension medication previously.",
+  "Patient reports severe body aches, chills, high fever since yesterday. Feels very weak and fatigued.",
+];
+let demoIndex = 0;
+
+function fillDemo() {
+  document.getElementById('consultText').value = DEMO_TEXTS[demoIndex % DEMO_TEXTS.length];
+  if (!document.getElementById('patientName').value) {
+    const names = ['Amit Kumar', 'Priya Patel', 'Rahul Sharma', 'Sunita Devi'];
+    document.getElementById('patientName').value = names[demoIndex % names.length];
+    document.getElementById('patientAge').value  = [34, 28, 45, 52][demoIndex % 4];
+    document.getElementById('patientGender').value = ['Male','Female','Male','Female'][demoIndex % 4];
+  }
+  demoIndex++;
+  showToast('Demo data loaded! Click "Generate AI Notes"', 'info');
+}
+
+async function generateNotes() {
+  const text = document.getElementById('consultText').value.trim();
+  if (!text) {
+    showToast('Please enter consultation text first', 'error');
+    return;
+  }
+
+  showLoading('🧠 AI is analyzing the consultation…');
+
+  try {
+    const res  = await fetch('/api/generate_notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    hideLoading();
+
+    if (data.success) {
+      currentSOAP = data.soap;
+      currentRx   = data.prescriptions;
+      renderResults(data.soap, data.prescriptions);
+      showToast('✅ SOAP notes generated successfully!', 'success');
+    } else {
+      showToast(data.message || 'Generation failed', 'error');
+    }
+  } catch (e) {
+    hideLoading();
+    showToast('Error connecting to server', 'error');
+  }
+}
+
+function renderResults(soap, rx) {
+  document.getElementById('soapS').value = soap.subjective || '';
+  document.getElementById('soapO').value = soap.objective  || '';
+  document.getElementById('soapA').value = soap.assessment || '';
+  document.getElementById('soapP').value = soap.plan       || '';
+
+  const tbody = document.getElementById('rxBody');
+  tbody.innerHTML = '';
+  if (rx && rx.length > 0) {
+    document.getElementById('rxTable').style.display = 'table';
+    document.getElementById('rxEmpty').style.display = 'none';
+    rx.forEach((m, i) => {
+      tbody.innerHTML += `<tr>
+        <td><strong>${i+1}</strong></td>
+        <td><strong>${m.name}</strong></td>
+        <td>${m.dosage}</td>
+        <td><span class="badge badge-blue">${m.frequency}</span></td>
+        <td>${m.duration}</td>
+      </tr>`;
+    });
+  } else {
+    document.getElementById('rxTable').style.display = 'none';
+    document.getElementById('rxEmpty').style.display = 'block';
+  }
+
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.add('show');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function saveRecord() {
+  const patientName = document.getElementById('patientName').value.trim() || 'Unknown Patient';
+  const rawText     = document.getElementById('consultText').value.trim();
+
+  // Read potentially-edited SOAP
+  const soap = {
+    subjective: document.getElementById('soapS').value,
+    objective:  document.getElementById('soapO').value,
+    assessment: document.getElementById('soapA').value,
+    plan:       document.getElementById('soapP').value,
+  };
+
+  if (!rawText) {
+    showToast('No consultation text to save', 'error');
+    return;
+  }
+
+  showLoading('💾 Saving record…');
+
+  try {
+    const res  = await fetch('/api/save_record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_name: patientName, raw_text: rawText, soap, prescriptions: currentRx }),
+    });
+    const data = await res.json();
+    hideLoading();
+
+    if (data.success) {
+      showToast('✅ Record saved successfully!', 'success');
+      setTimeout(() => window.location.href = '/history', 1800);
+    } else {
+      showToast(data.message || 'Save failed', 'error');
+    }
+  } catch (e) {
+    hideLoading();
+    showToast('Error saving record', 'error');
+  }
+}
+
+function clearAll() {
+  document.getElementById('consultText').value = '';
+  document.getElementById('patientName').value = '';
+  document.getElementById('patientAge').value  = '';
+  document.getElementById('patientGender').value = '';
+  document.getElementById('resultsPanel').classList.remove('show');
+  currentSOAP = {}; currentRx = [];
+}
+
+function printNotes() {
+  const soap = {
+    S: document.getElementById('soapS').value,
+    O: document.getElementById('soapO').value,
+    A: document.getElementById('soapA').value,
+    P: document.getElementById('soapP').value,
+  };
+  const name = document.getElementById('patientName').value || 'Unknown';
+  const win  = window.open('', '_blank');
+  win.document.write(`
+    <html><head><title>SOAP Notes — ${name}</title>
+    <style>body{font-family:sans-serif;padding:40px;color:#222}h1{color:#1a6bcc}
+    .section{margin:16px 0;padding:14px;border-left:4px solid #1a6bcc;background:#f7f9fc}
+    .label{font-weight:700;text-transform:uppercase;font-size:.8rem;letter-spacing:.06em;color:#1a6bcc}
+    </style></head><body>
+    <h1>🏥 MediScribe AI — Clinical Notes</h1>
+    <p><strong>Patient:</strong> ${name} | <strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+    <div class="section"><div class="label">Subjective</div><p>${soap.S}</p></div>
+    <div class="section"><div class="label">Objective</div><p>${soap.O}</p></div>
+    <div class="section"><div class="label">Assessment</div><p>${soap.A}</p></div>
+    <div class="section"><div class="label">Plan</div><p>${soap.P}</p></div>
+    </body></html>`);
+  win.print();
+}
+
+function showLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg || 'Processing…';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  t.textContent = (icons[type] || '') + ' ' + msg;
+  t.className   = `toast ${type} show`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
