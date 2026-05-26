@@ -422,8 +422,11 @@ if __name__ == '__main__':
     print("\n" + "="*55)
     print("  🏥  MediScribe AI — Clinical Documentation System")
     print("="*55)
-    print("  URL   : http://127.0.0.1:5000")
     print("  Demo Doctor : doctor@demo.com / doctor123")
     print("  Demo Admin  : admin@demo.com  / admin123")
     print("="*55 + "\n")
-    app.run(debug=True, port=5000)
+    
+    # Render assigns a dynamic port via environment variables
+    port = int(os.environ.get("PORT", 5000))
+    # Must bind to 0.0.0.0 so Render can route external traffic to it
+    app.run(host="0.0.0.0", port=port, debug=False)
